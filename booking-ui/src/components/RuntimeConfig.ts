@@ -10,6 +10,7 @@ interface RuntimeUserInfos {
     dailyBasisBooking: boolean;
     showNames: boolean;
     defaultTimezone: string;
+    isAdmin: boolean;
 }
 
 export default class RuntimeConfig {
@@ -24,7 +25,10 @@ export default class RuntimeConfig {
         dailyBasisBooking: false,
         showNames: false,
         defaultTimezone: "",
+        isAdmin: false,
     };
+
+    
 
     static verifyToken = async (resolve: Function) => {
         Ajax.CREDENTIALS = await Ajax.PERSISTER.readCredentialsFromSessionStorage();
@@ -38,6 +42,8 @@ export default class RuntimeConfig {
             User.getSelf().then(user => {
                 RuntimeConfig.loadSettings().then(() => {
                     RuntimeConfig.setDetails(user.email);
+                    if (user["role"] > 10){RuntimeConfig.INFOS.isAdmin = true}
+                    else {RuntimeConfig.INFOS.isAdmin=false}
                     resolve();
                     //this.setState({ isLoading: false });
                 });
@@ -58,12 +64,23 @@ export default class RuntimeConfig {
         return new Promise<void>(function (resolve, reject) {
             OrgSettings.list().then(settings => {
                 settings.forEach(s => {
-                    if (typeof window !== 'undefined') {
-                        if (s.name === "max_bookings_per_user") RuntimeConfig.INFOS.maxBookingsPerUser = window.parseInt(s.value);
-                        if (s.name === "max_concurrent_bookings_per_user") RuntimeConfig.INFOS.maxConcurrentBookingsPerUser = window.parseInt(s.value);
-                        if (s.name === "max_days_in_advance") RuntimeConfig.INFOS.maxDaysInAdvance = window.parseInt(s.value);
-                        if (s.name === "max_booking_duration_hours") RuntimeConfig.INFOS.maxBookingDurationHours = window.parseInt(s.value);
+                    if (RuntimeConfig.INFOS.isAdmin ){
+                        if (typeof window !== 'undefined') {
+                            if (s.name === "max_bookings_per_user") RuntimeConfig.INFOS.maxBookingsPerUser = 500;
+                            if (s.name === "max_concurrent_bookings_per_user") RuntimeConfig.INFOS.maxConcurrentBookingsPerUser = 5000;
+                            if (s.name === "max_days_in_advance") RuntimeConfig.INFOS.maxDaysInAdvance =365;
+                            if (s.name === "max_booking_duration_hours") RuntimeConfig.INFOS.maxBookingDurationHours = 5000;
+                        }
                     }
+                    else {
+                        if (typeof window !== 'undefined') {
+                            if (s.name === "max_bookings_per_user") RuntimeConfig.INFOS.maxBookingsPerUser = window.parseInt(s.value);
+                            if (s.name === "max_concurrent_bookings_per_user") RuntimeConfig.INFOS.maxConcurrentBookingsPerUser = window.parseInt(s.value);
+                            if (s.name === "max_days_in_advance") RuntimeConfig.INFOS.maxDaysInAdvance =window.parseInt(s.value);
+                            if (s.name === "max_booking_duration_hours") RuntimeConfig.INFOS.maxBookingDurationHours = window.parseInt(s.value);
+                        }
+                    }
+                    
                     if (s.name === "daily_basis_booking") RuntimeConfig.INFOS.dailyBasisBooking = (s.value === "1");
                     if (s.name === "show_names") RuntimeConfig.INFOS.showNames = (s.value === "1");
                     if (s.name === "default_timezone") RuntimeConfig.INFOS.defaultTimezone = s.value;
